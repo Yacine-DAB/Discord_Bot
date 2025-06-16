@@ -9,7 +9,6 @@ import logging
 from datetime import datetime, timedelta
 from io import StringIO
 
-# Import from other files
 from database import Database
 from views import VerificationView
 from utils import validate_url
