@@ -110,4 +110,79 @@ class Database:
           else:
                return self.users_data.get(str(user_id))
           
+     async def get_payout_summary(self, period: str) -> List[Dict[str, Any]]:
+          now = datetime.now()
+          date_filter = None
+          
+          if period == 'week':
+               date_filter = now - timedelta(days=7)
+          elif period == 'month':
+               date_filter = now - timedelta(days=30)
                
+          if self.use_mongodb:
+               match_stage = {}
+               if date_filter:
+                    match_stage = {'submitted_at': {'$gte'}: date_filter}
+                    
+               pipeline = [
+                    {'$match': match_stage},
+                    {'$group': {
+                         "_id": '$discord_id',
+                         'total_views': {'$sum': '$views'},
+                         'total_earnigns': {'$sum': '$earnings'}
+                    }}
+               ]
+               return list(self.clips.aggregate(pipeline))
+          else:
+               results = {}
+               
+               for clip in self.clips_data:
+                    if date_filter and clip['submitted_at'] < date_filter:
+                         continue
+                    
+                    user_id = clip['discord_id']
+                    if user_id not in results:
+                         results[user_id] = {
+                              'id': user_id,
+                              'total_views': 0,
+                              'total_earnings': 0.0
+                         }
+                         
+                    results[user_id]['total_views'] += clip['views']
+                    results[user_id]['total_earnings'] += clip['earnings']
+                    
+               return list(results.values())
+          
+          
+     async def export_to_csv(self, data: List[Dict[str, Any]]) -> str:
+          output = StringIO()
+          writer = csv.writer(output)
+          writer.writerow(['Discord ID', 'Username', 'Total Views', 'Total Earnings'])
+          
+          for entry in data:
+               writer.writerow([
+                    entry['_id'],
+                    'N/A', # Would need bot instance to resolve
+                    entry['total_views'],
+                    f"${entry['total_earnings']:.2f}"
+               ])
+               
+          return output.getvalue()
+     
+     
+     async def record_payout(self, user_id: int, admin_id: int):
+          payout_data = {
+               'user_id': user_id,
+               'admin_id': admin_id,
+               'paid_at': datetime.now()
+          }
+          
+          if self.use_mongodb:
+               self.payouts.insert_one(payout_data)
+          else:
+               self.payouts_data.append(payout_data)
+               self.save_data()
+               
+     async def generate_analytics(self):
+          #Simplified analytics implementation
+          pass

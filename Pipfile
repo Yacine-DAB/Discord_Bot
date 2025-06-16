@@ -4,9 +4,9 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-"discord.py" = {extras = ["voice"], version = ">=2.3.2"}
 pymongo = ">=4.5.0"
 python-dotenv = "*"
+"discord.py" = {extras = ["voice"], version = ">=2.0.0"}
 
 [dev-packages]
 
